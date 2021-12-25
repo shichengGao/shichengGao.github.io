@@ -1,0 +1,219 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="format-detection" content="telephone=no"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><link rel="icon" href="/images/icons/favicon-16x16.png?v=2.6.2" type="image/png" sizes="16x16"><link rel="icon" href="/images/icons/favicon-32x32.png?v=2.6.2" type="image/png" sizes="32x32"><meta name="description" content="DoG检测算子        DoG是SIFT特征检测的重要一部分，所以这个项目的许多细节都参考了SIFT的实现过程，主要是参考了项目opensift，这个早期的开源代码最终被并入opencv库；理论部分，主要参考了SIFT定位算法关键步骤的说明。 这份代码注释不够规范，清谅解。                     1. 代码实现关键点">
+<meta property="og:type" content="article">
+<meta property="og:title" content="DoG检测算子">
+<meta property="og:url" content="http://example.com/2021/12/22/DoG%E6%A3%80%E6%B5%8B%E7%AE%97%E5%AD%90/index.html">
+<meta property="og:site_name" content="南海总督的小屋">
+<meta property="og:description" content="DoG检测算子        DoG是SIFT特征检测的重要一部分，所以这个项目的许多细节都参考了SIFT的实现过程，主要是参考了项目opensift，这个早期的开源代码最终被并入opencv库；理论部分，主要参考了SIFT定位算法关键步骤的说明。 这份代码注释不够规范，清谅解。                     1. 代码实现关键点">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/2021/12/22/DoG%E6%A3%80%E6%B5%8B%E7%AE%97%E5%AD%90/ret_1.jpg">
+<meta property="og:image" content="http://example.com/2021/12/22/DoG%E6%A3%80%E6%B5%8B%E7%AE%97%E5%AD%90/ret_2.jpg">
+<meta property="article:published_time" content="2021-12-22T12:36:56.000Z">
+<meta property="article:modified_time" content="2021-12-25T13:13:58.899Z">
+<meta property="article:author" content="scGao">
+<meta property="article:tag" content="SIFT">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2021/12/22/DoG%E6%A3%80%E6%B5%8B%E7%AE%97%E5%AD%90/ret_1.jpg"><title>DoG检测算子 | 南海总督的小屋</title><link ref="canonical" href="http://example.com/2021/12/22/DoG%E6%A3%80%E6%B5%8B%E7%AE%97%E5%AD%90/"><link rel="dns-prefetch" href="https://cdn.jsdelivr.net"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.12.1/css/all.min.css" type="text/css"><link rel="stylesheet" href="/css/index.css?v=2.6.2"><script>var Stun = window.Stun || {};
+var CONFIG = {
+  root: '/',
+  algolia: undefined,
+  assistSearch: undefined,
+  fontIcon: {"prompt":{"success":"fas fa-check-circle","info":"fas fa-arrow-circle-right","warning":"fas fa-exclamation-circle","error":"fas fa-times-circle"},"copyBtn":"fas fa-copy"},
+  sidebar: {"offsetTop":"20px","tocMaxDepth":6},
+  header: {"enable":true,"showOnPost":true,"scrollDownIcon":false},
+  postWidget: {"endText":true},
+  nightMode: {"enable":true},
+  back2top: {"enable":true},
+  codeblock: {"style":"default","highlight":"light","wordWrap":false},
+  reward: false,
+  fancybox: false,
+  zoomImage: {"gapAside":"20px"},
+  galleryWaterfall: undefined,
+  lazyload: false,
+  pjax: undefined,
+  externalLink: {"icon":{"enable":true,"name":"fas fa-external-link-alt"}},
+  shortcuts: undefined,
+  prompt: {"copyButton":"Copy","copySuccess":"Copy Success","copyError":"Copy Error"},
+  sourcePath: {"js":"js","css":"css","images":"images"},
+};
+
+window.CONFIG = CONFIG;</script><!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --><meta name="generator" content="Hexo 6.0.0"></head><body><div class="container" id="container"><header class="header" id="header"><div class="header-inner"><nav class="header-nav header-nav--fixed"><div class="header-nav-inner"><div class="header-nav-menubtn"><i class="fas fa-bars"></i></div><div class="header-nav-menu"><div class="header-nav-menu-item"><a class="header-nav-menu-item__link" href="/"><span class="header-nav-menu-item__icon"><i class="fas fa-home"></i></span><span class="header-nav-menu-item__text">Home</span></a></div><div class="header-nav-menu-item"><a class="header-nav-menu-item__link" href="/archives/"><span class="header-nav-menu-item__icon"><i class="fas fa-folder-open"></i></span><span class="header-nav-menu-item__text">Archives</span></a></div></div><div class="header-nav-mode"><div class="mode"><div class="mode-track"><span class="mode-track-moon"></span><span class="mode-track-sun"></span></div><div class="mode-thumb"></div></div></div></div></nav><div class="header-banner"><div class="header-banner-info"><div class="header-banner-info__title">南海总督的小屋</div><div class="header-banner-info__subtitle"></div></div></div></div></header><main class="main" id="main"><div class="main-inner"><div class="content-wrap" id="content-wrap"><div class="content" id="content"><!-- Just used to judge whether it is an article page--><div id="is-post"></div><div class="post"><header class="post-header"><h1 class="post-title">DoG检测算子</h1><div class="post-meta"><span class="post-meta-item post-meta-item--createtime"><span class="post-meta-item__icon"><i class="far fa-calendar-plus"></i></span><span class="post-meta-item__info">Created</span><span class="post-meta-item__value">2021-12-22</span></span><span class="post-meta-item post-meta-item--updatetime"><span class="post-meta-item__icon"><i class="far fa-calendar-check"></i></span><span class="post-meta-item__info">Updated</span><span class="post-meta-item__value">2021-12-25</span></span></div></header><div class="post-body">
+        <h1 id="dog检测算子"   >
+          <a href="#dog检测算子" class="heading-link"><i class="fas fa-link"></i></a>DoG检测算子</h1>
+      
+<p>DoG是SIFT特征检测的重要一部分，所以这个项目的许多细节都参考了SIFT的实现过程，主要是参考了项目<span class="exturl"><a class="exturl__link"   target="_blank" rel="noopener" href="https://github.com/robwhess/opensift" >opensift</a><span class="exturl__icon"><i class="fas fa-external-link-alt"></i></span></span>，这个早期的开源代码最终被并入opencv库；理论部分，主要参考了<span class="exturl"><a class="exturl__link"   target="_blank" rel="noopener" href="https://www.cnblogs.com/ronny/p/4028776.html" >SIFT定位算法关键步骤的说明</a><span class="exturl__icon"><i class="fas fa-external-link-alt"></i></span></span>。</p>
+<p>这份代码注释不够规范，清谅解。</p>
+
+        <h2 id="代码实现关键点"   >
+          <a href="#代码实现关键点" class="heading-link"><i class="fas fa-link"></i></a>1. 代码实现关键点</h2>
+      
+
+        <h3 id="高斯金字塔的构建"   >
+          <a href="#高斯金字塔的构建" class="heading-link"><i class="fas fa-link"></i></a>1.1 高斯金字塔的构建</h3>
+      
+<p>​ DoG金字塔基于高斯金字塔而建立，所以算法第一部是建立高斯金字塔<span class="math inline">\(G(x,y,\sigma)\)</span>. 具体实现代码如下：</p>
+<figure class="highlight plaintext"><div class="table-container"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">	#建立高斯金字塔</span><br><span class="line">   def __buildGaussianPyramid(self, imgBase: np.ndarray, nOctaves: int, nIntervals: int, sigma: float) -&gt; None:</span><br><span class="line">       #k是每个interval的相对于前一interval的sigma的增量（通过乘k来实现增加）</span><br><span class="line">       k = 2.0**(1/nIntervals)</span><br><span class="line">       #这里建立的是一个octave上，每一层相对于上一层的sigma增量</span><br><span class="line">       sigmas = [sigma, sigma * ((k*k-1)**0.5)]</span><br><span class="line">       for i in range(2,nIntervals+3):</span><br><span class="line">           sigmas.append(sigmas[-1]*k)</span><br><span class="line">#建立金字塔，对于同一octave上的多层，每一层都是由上一层经高斯模糊得来的</span><br><span class="line">#跨越octave,需要降采样时，直接使用上一octave倒数第三层的图像resize即可，这层图像和本octave第一层是同sigma的</span><br><span class="line">       for i_octave in range(nOctaves):</span><br><span class="line">           for i_interval in range(nIntervals+3):</span><br><span class="line">               if i_octave == i_interval == 0:</span><br><span class="line">                   self.gaussian_pyr.append([imgBase.copy()])</span><br><span class="line">               elif i_interval == 0:</span><br><span class="line">                   oriImg = self.gaussian_pyr[-1][-3]</span><br><span class="line">                   self.gaussian_pyr.append([cv2.resize(oriImg,(oriImg.shape[0]//2, oriImg.shape[1]//2))])</span><br><span class="line">               else:</span><br><span class="line">           		self.gaussian_pyr[i_octave].append(cv2.GaussianBlur(self.gaussian_pyr[i_octave][-1],(0,0),sigmaX=sigmas[i_interval],sigmaY=sigmas[i_interval]))</span><br></pre></td></tr></table></div></figure>
+<p>可以注意到，第二层相对于第一层的增量是<span class="math inline">\(\sqrt{k^2-1}\sigma_0\)</span>而不是<span class="math inline">\(k \sigma_0\)</span>，这是因为基于反走样的要求，我们要把原始图像看作已经被相机做过高斯模糊<span class="math inline">\(\sigma_n\)</span>处理的图像，而且设定成把图像放大两倍之后的，<span class="math inline">\(\sigma_n\)</span>通常摄制成0.5，所以增量为<span class="math inline">\(\sqrt{k^2-2\sigma_n}\sigma_0 = \sqrt{k^2-1}\sigma_0\)</span>。这个部分可参考此<span class="exturl"><a class="exturl__link"   target="_blank" rel="noopener" href="https://www.cnblogs.com/ronny/p/4028776.html" >SIFT定位算法关键步骤的说明</a><span class="exturl__icon"><i class="fas fa-external-link-alt"></i></span></span>。</p>
+
+        <h3 id="dog金字塔的构建"   >
+          <a href="#dog金字塔的构建" class="heading-link"><i class="fas fa-link"></i></a>1.2 DoG金字塔的构建</h3>
+      
+<p>DoG金字塔根据高斯金字塔每个interval上的差值得来，代码如下：</p>
+<figure class="highlight plaintext"><div class="table-container"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">#建立DoG金字塔</span><br><span class="line">   def __buildDoGPyramid(self, nOctaves: int, nIntervals: int):</span><br><span class="line">       if not self.gaussian_pyr:</span><br><span class="line">           raise Exception(&quot;Cannot calculate DoG pyramid before gaussian pyramid.&quot;)</span><br><span class="line">       for i_octave in range(nOctaves):</span><br><span class="line">           self.dog_pyr.append([])</span><br><span class="line">           for i_interval in range(nIntervals+2):</span><br><span class="line">               self.dog_pyr[-1].append(self.gaussian_pyr[i_octave][i_interval+1] - self.gaussian_pyr[i_octave][i_interval])</span><br></pre></td></tr></table></div></figure>
+
+        <h3 id="局部极值搜索"   >
+          <a href="#局部极值搜索" class="heading-link"><i class="fas fa-link"></i></a>1.3 局部极值搜索</h3>
+      
+<p>SIFT的局部极值定义为，在<span class="math inline">\(D(x,y,sigma)\)</span>上一个3*3*3区域上，元素(x,y,sigma)取得的极大值或极小数值，代码如下：</p>
+<figure class="highlight plaintext"><div class="table-container"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">#寻找局部的极值点</span><br><span class="line">   def __isExtrema(self, i_octave: int, i_interval: int, row: int, col: int) -&gt; bool:</span><br><span class="line">       value = self.dog_pyr[i_octave][i_interval][row][col]</span><br><span class="line">       if value &gt; 0:</span><br><span class="line">           for l in range(-1,2):</span><br><span class="line">               for i in range(-1,2):</span><br><span class="line">                   for j in range(-1,2):</span><br><span class="line">                       if self.dog_pyr[i_octave][i_interval+l][row+i][col+j] &gt; value:</span><br><span class="line">                           return False</span><br><span class="line">       else:</span><br><span class="line">           for l in range(-1,2):</span><br><span class="line">               for i in range(-1,2):</span><br><span class="line">                   for j in range(-1,2):</span><br><span class="line">                       if self.dog_pyr[i_octave][i_interval+l][row+i][col+j] &lt; value:</span><br><span class="line">                           return False</span><br><span class="line">       return True</span><br></pre></td></tr></table></div></figure>
+
+        <h3 id="插值获取精确极值点"   >
+          <a href="#插值获取精确极值点" class="heading-link"><i class="fas fa-link"></i></a>1.4 插值获取精确极值点</h3>
+      
+
+        <h4 id="计算方法"   >
+          <a href="#计算方法" class="heading-link"><i class="fas fa-link"></i></a>1.4.1 计算方法</h4>
+      
+<p>​ 在尺度空间获得的极值点映射回原始图像，不一定是真实的极值点，真实极值点可能存在于两个离散的极值点之间。为了获得精确的数据，有必要对离散点插值获取真正的极值点。</p>
+<p>这部分首先将<span class="math inline">\(D(x,y,\sigma)\)</span>做泰勒二阶展开，然后使它的一阶导数等于0，以此求得<span class="math inline">\(\Delta x,\Delta y,\Delta \sigma\)</span>三个变化量。具体如下，对于一般函数的二阶泰勒展开，有： <span class="math display">\[
+f(x) \approx f(0) + f&#39;(0)x + \frac{f&#39;&#39;(0)}{2}x^2
+\]</span> 在离散的图像上，<span class="math inline">\(f&#39;(x)\)</span>和<span class="math inline">\(f&#39;&#39;(x)\)</span>可以由差分近似表示为：</p>
+<span class="math display">\[
+\begin{align}
+f&#39;(x) &amp; = &amp; \frac{f(x+1)-f(x-1)}{2} \\
+f&#39;&#39;(x) &amp; = &amp; f(x+1) + f(x-1) - 2f(x)
+\end{align}
+\]</span> 而对于多元的函数有： <span class="math display">\[
+\therefore \begin{aligned}
+\frac{\partial^{2} f\left(x, y\right)}{\partial x \partial y} \approx 
+&amp; \frac{1}{4 h^{2}}\left[f\left(x+h, y+h\right)+f\left(x-h, y-h\right)\right.
+\\
+&amp;\left.-f\left(x+h, y-h\right)-f\left(x-h, y+h\right)\right]
+\end{aligned}
+\]</span> 对于多变量的<span class="math inline">\(D(x,y,\sigma)\)</span>，它的二阶泰勒展开式是: $$ D(x,y,) = D(x,y,)+
+<span class="math display">\[\begin{bmatrix}  \frac{\partial D}{x} &amp; \frac{\partial D}{y} &amp; \frac{\partial D}{\sigma} 
+
+   \end{bmatrix}\begin{bmatrix} 
+
+   \Delta x\\ 
+
+   \Delta y\\ 
+
+   \Delta \sigma 
+
+   \end{bmatrix}\]</span>
++
+<span class="math display">\[\begin{bmatrix} 
+
+   \Delta x &amp;\Delta y  &amp; \Delta \sigma 
+
+   \end{bmatrix}\begin{bmatrix} 
+
+   \frac{\partial ^2D}{\partial x^2} &amp; \frac{\partial ^2D}{\partial x\partial y} &amp;\frac{\partial ^2D}{\partial x\partial \sigma} \\ 
+
+   \frac{\partial ^2D}{\partial y\partial x}&amp; \frac{\partial ^2D}{\partial y^2} &amp; \frac{\partial ^2D}{\partial y\partial \sigma}\\ 
+
+   \frac{\partial ^2D}{\partial \sigma\partial x}&amp;\frac{\partial ^2D}{\partial \sigma\partial y}  &amp; \frac{\partial ^2D}{\partial \sigma^2} 
+
+   \end{bmatrix}\begin{bmatrix} 
+
+   \Delta x\\ 
+
+   \Delta y\\ 
+
+   \Delta \sigma 
+
+   \end{bmatrix}\]</span>
+<p><span class="math display">\[
+写为向量形式：
+\]</span> D(x) = D+x+x^Tx $$ 使它的一阶导等于0，那么<span class="math inline">\(\Delta x = -\frac{\partial^2D^{-1}}{\partial x^2}\frac{\partial D(x)}{\partial x}\)</span>。</p>
+
+        <h4 id="代码实现"   >
+          <a href="#代码实现" class="heading-link"><i class="fas fa-link"></i></a>1.4.2 代码实现</h4>
+      
+<p>参考opensift的代码，这样的近似插值是迭代计算的，最大迭代次数通常为5，若此时还不收敛，就抛弃这个极值点。</p>
+<figure class="highlight plaintext"><div class="table-container"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"> #通过迭代插值寻找真正的极值点</span><br><span class="line">   def __getInterpolatedExtremum(self,i_octave: int, i_interval: int, row: int, col: int, contr_Thr: float):</span><br><span class="line">       nIntervals = len(self.dog_pyr[i_octave])</span><br><span class="line">     </span><br><span class="line">       width, height = self.dog_pyr[i_octave][i_interval].shape</span><br><span class="line">       xc,xr,xi = .0,.0,.0</span><br><span class="line">       #迭代通常最多5次</span><br><span class="line">       for i in range(self.__MAX_INTERP_ITER_STEPS):</span><br><span class="line">           xc,xr,xi = self.__interp_iter(i_octave,i_interval,row,col)</span><br><span class="line">           if math.fabs(xc) &lt; 0.5 and math.fabs(xr) &lt; 0.5 and math.fabs(xi) &lt; 0.5: #迭代已收敛</span><br><span class="line">               break</span><br><span class="line"></span><br><span class="line">           i_interval += round(xi)</span><br><span class="line">           row += round(xr)</span><br><span class="line">           col += round(xc)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">           if i_interval&lt;1 or i_interval &gt;= nIntervals-1 or row &lt; self.__SIFT_IMAGE_BORDER or col &lt;self.__SIFT_IMAGE_BORDER \</span><br><span class="line">           or row &gt; height - self.__SIFT_IMAGE_BORDER or col &gt; width - self.__SIFT_IMAGE_BORDER:</span><br><span class="line">               return None</span><br><span class="line"></span><br><span class="line">#迭代未收敛，放弃极值点</span><br><span class="line">       if i &gt; self.__MAX_INTERP_ITER_STEPS:</span><br><span class="line">           return None</span><br><span class="line"></span><br><span class="line">#计算插值后(即原极值点加上delta偏移量后)的对比度是否符合要求，不符则抛弃</span><br><span class="line">       contra = self.__interp_contr(i_octave,i_interval,row,col,xc,xr,xi)</span><br><span class="line">       if math.fabs(contra) &lt; contr_Thr / (nIntervals-2):</span><br><span class="line">           return None</span><br><span class="line"></span><br><span class="line">#返回关键点和它的尺度空间信息</span><br><span class="line">       return (i_interval,row,col,(col + xc) * 2.0**i_octave, (row + xr) * 2.0**i_octave)</span><br><span class="line"></span><br><span class="line">#每次的迭代插值</span><br><span class="line">   def __interp_iter(self,i_octave: int, i_interval: int, row: int, col: int) -&gt; (float,float,float):</span><br><span class="line">       dD = self.__getDerivD(i_octave,i_interval,row,col)</span><br><span class="line">       H = self.__getHessianD(i_octave,i_interval,row,col)</span><br><span class="line">       H_inv = np.linalg.inv(H)</span><br><span class="line">       delta = np.matmul(-H_inv,dD)</span><br><span class="line">       return (delta[0],delta[1],delta[2])</span><br><span class="line">#获取向量[dx,dy,dsigma]</span><br><span class="line">   def __getDerivD(self,i_octave: int, i_interval: int, row: int, col: int) -&gt; np.ndarray:</span><br><span class="line">       #dx,dy,ds refer to the differential in x,y and sigma directions, which are calculated by difference</span><br><span class="line">       dx = (self.dog_pyr[i_octave][i_interval][row][col+1] - self.dog_pyr[i_octave][i_interval][row][col-1]) / 2.0</span><br><span class="line">       dy = (self.dog_pyr[i_octave][i_interval][row+1][col] - self.dog_pyr[i_octave][i_interval][row-1][col]) / 2.0</span><br><span class="line">       ds = (self.dog_pyr[i_octave][i_interval][row+1][col] - self.dog_pyr[i_octave][i_interval][row-1][col]) / 2.0</span><br><span class="line"></span><br><span class="line">       return np.array([dx,dy,ds])</span><br></pre></td></tr></table></div></figure>
+<p>其中近似一阶导函数__getDerivD实现如下：</p>
+<figure class="highlight plaintext"><div class="table-container"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">#获取向量[dx,dy,dsigma]</span><br><span class="line">   def __getDerivD(self,i_octave: int, i_interval: int, row: int, col: int) -&gt; np.ndarray:</span><br><span class="line">       #dx,dy,ds refer to the differential in x,y and sigma directions, which are calculated by difference</span><br><span class="line">       dx = (self.dog_pyr[i_octave][i_interval][row][col+1] - self.dog_pyr[i_octave][i_interval][row][col-1]) / 2.0</span><br><span class="line">       dy = (self.dog_pyr[i_octave][i_interval][row+1][col] - self.dog_pyr[i_octave][i_interval][row-1][col]) / 2.0</span><br><span class="line">       ds = (self.dog_pyr[i_octave][i_interval][row+1][col] - self.dog_pyr[i_octave][i_interval][row-1][col]) / 2.0</span><br><span class="line"></span><br><span class="line">       return np.array([dx,dy,ds])</span><br></pre></td></tr></table></div></figure>
+<p>而海森矩阵函数__getHessianD如下：</p>
+<figure class="highlight plaintext"><div class="table-container"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">def __getHessianD(self,i_octave: int, i_interval: int, row: int, col: int) -&gt; np.ndarray:</span><br><span class="line"></span><br><span class="line">        v = self.dog_pyr[i_octave][i_interval][row][col]</span><br><span class="line">        dxx = (self.dog_pyr[i_octave][i_interval][row][col+1] + self.dog_pyr[i_octave][i_interval][row][col-1] - 2*v )</span><br><span class="line">        dyy = (self.dog_pyr[i_octave][i_interval][row+1][col] + self.dog_pyr[i_octave][i_interval][row-1][col] - 2*v )</span><br><span class="line">        dss = (self.dog_pyr[i_octave][i_interval+1][row][col] + self.dog_pyr[i_octave][i_interval-1][row][col] - 2*v)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        dxy = (self.dog_pyr[i_octave][i_interval][row+1][col+1]  \</span><br><span class="line">              + self.dog_pyr[i_octave][i_interval][row-1][col-1] \</span><br><span class="line">              - self.dog_pyr[i_octave][i_interval][row+1][col-1] \</span><br><span class="line">              - self.dog_pyr[i_octave][i_interval][row-1][col+1]) / 4.0</span><br><span class="line"></span><br><span class="line">        dxs = (self.dog_pyr[i_octave][i_interval+1][row][col+1]  \</span><br><span class="line">              + self.dog_pyr[i_octave][i_interval-1][row][col-1] \</span><br><span class="line">              - self.dog_pyr[i_octave][i_interval+1][row][col-1] \</span><br><span class="line">              - self.dog_pyr[i_octave][i_interval-1][row][col+1]) / 4.0</span><br><span class="line"></span><br><span class="line">        dys = (self.dog_pyr[i_octave][i_interval+1][row+1][col]  \</span><br><span class="line">              + self.dog_pyr[i_octave][i_interval-1][row-1][col] \</span><br><span class="line">              - self.dog_pyr[i_octave][i_interval-1][row+1][col] \</span><br><span class="line">              - self.dog_pyr[i_octave][i_interval+1][row-1][col]) / 4.0</span><br><span class="line"></span><br><span class="line">        return np.array([[dxx,dxy,dxs],[dxy,dyy,dys],[dxs,dys,dss]])</span><br></pre></td></tr></table></div></figure>
+
+        <h3 id="滤去边缘上的关键点"   >
+          <a href="#滤去边缘上的关键点" class="heading-link"><i class="fas fa-link"></i></a>1.5 滤去边缘上的关键点</h3>
+      
+<p>在图像中一些物体边缘上检测得到的关键点是不够稳定的，很难确保在其他条件下再次检测出该电，因此要去除边缘上的取点，这一步通过删去在某个方向的曲率明显很大的点来实现。</p>
+<p>已知有海森矩阵：<span class="math inline">\(H(x,y) = \begin{bmatrix}D_{xx}(x,y) &amp; D_{xy}(x,y)\\ D_{xy}(x,y) &amp;D_{yy}(x,y) \end{bmatrix}\)</span></p>
+<p>如果求得它的特征值<span class="math inline">\(\lambda_\alpha,\lambda_\beta\)</span>，那么可以通过两个特征值的比率判断是否接近一个边缘。不过为了节省算力，可以通过海森矩阵的行列式<span class="math inline">\(Det(H)\)</span>和迹<span class="math inline">\(Tr(H)\)</span>来获得近似比值，假设两个<span class="math inline">\(\lambda\)</span>的比值是<span class="math inline">\(\gamma\)</span>,，通常<span class="math inline">\(\gamma\)</span>取10：<br />
+<span class="math display">\[
+\frac{Tr(H)^2}{Det(H)} = \frac{(\alpha+\beta)^2}{\alpha\beta} = \frac{(\gamma+1)^2}{\gamma}
+\]</span> 只需使上式小于预定<span class="math inline">\(\gamma\)</span>的<span class="math inline">\(\frac{(\gamma+1)^2}{\gamma}\)</span>即可。</p>
+
+        <h2 id="实现效果"   >
+          <a href="#实现效果" class="heading-link"><i class="fas fa-link"></i></a>2. 实现效果</h2>
+      
+<p>对于文件夹中的buffterfly.png，不同对比度阈值获取如下结果：</p>
+<img src="/2021/12/22/DoG%E6%A3%80%E6%B5%8B%E7%AE%97%E5%AD%90/ret_1.jpg" class="" title="ahhhahaha">
+<img src="/2021/12/22/DoG%E6%A3%80%E6%B5%8B%E7%AE%97%E5%AD%90/ret_2.jpg" class="" title="hohohooho">
+<p>上面两图分别是对比度阈值为0.1和0.04的版本，特征点显得多且杂乱，程序没有采用滤去响应值低于最大值0.1倍的点的策略。</p>
+</div><footer class="post-footer"><div class="post-ending ending"><div class="ending__text">------ END ------</div></div><div class="post-copyright copyright"><div class="copyright-author"><span class="copyright-author__name">Author: </span><span class="copyright-author__value"><a href="http://example.com">scGao</a></span></div><div class="copyright-link"><span class="copyright-link__name">Link: </span><span class="copyright-link__value"><a href="http://example.com/2021/12/22/DoG%E6%A3%80%E6%B5%8B%E7%AE%97%E5%AD%90/">http://example.com/2021/12/22/DoG%E6%A3%80%E6%B5%8B%E7%AE%97%E5%AD%90/</a></span></div><div class="copyright-notice"><span class="copyright-notice__name">Copyright: </span><span class="copyright-notice__value">All articles in this blog are licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en" rel="external nofollow" target="_blank">BY-NC-SA</a> unless stating additionally</span></div></div><div class="post-tags"><span class="post-tags-item"><span class="post-tags-item__icon"><i class="fas fa-tag"></i></span><a class="post-tags-item__link" href="http://example.com/tags/SIFT/">SIFT</a></span></div><nav class="post-paginator paginator"><div class="paginator-prev"><a class="paginator-prev__link" href="/2021/12/25/hello-world/"><span class="paginator-prev__icon"><i class="fas fa-angle-left"></i></span><span class="paginator-prev__text">Hello World</span></a></div></nav></footer></div></div></div><div class="sidebar-wrap" id="sidebar-wrap"><aside class="sidebar" id="sidebar"><div class="sidebar-nav"><span class="sidebar-nav-toc current">Catalog</span><span class="sidebar-nav-ov">Overview</span></div><section class="sidebar-toc"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#dog%E6%A3%80%E6%B5%8B%E7%AE%97%E5%AD%90"><span class="toc-number">1.</span> <span class="toc-text">
+          DoG检测算子</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BB%A3%E7%A0%81%E5%AE%9E%E7%8E%B0%E5%85%B3%E9%94%AE%E7%82%B9"><span class="toc-number">1.1.</span> <span class="toc-text">
+          1. 代码实现关键点</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%AB%98%E6%96%AF%E9%87%91%E5%AD%97%E5%A1%94%E7%9A%84%E6%9E%84%E5%BB%BA"><span class="toc-number">1.1.1.</span> <span class="toc-text">
+          1.1 高斯金字塔的构建</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#dog%E9%87%91%E5%AD%97%E5%A1%94%E7%9A%84%E6%9E%84%E5%BB%BA"><span class="toc-number">1.1.2.</span> <span class="toc-text">
+          1.2 DoG金字塔的构建</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%B1%80%E9%83%A8%E6%9E%81%E5%80%BC%E6%90%9C%E7%B4%A2"><span class="toc-number">1.1.3.</span> <span class="toc-text">
+          1.3 局部极值搜索</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8F%92%E5%80%BC%E8%8E%B7%E5%8F%96%E7%B2%BE%E7%A1%AE%E6%9E%81%E5%80%BC%E7%82%B9"><span class="toc-number">1.1.4.</span> <span class="toc-text">
+          1.4 插值获取精确极值点</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E8%AE%A1%E7%AE%97%E6%96%B9%E6%B3%95"><span class="toc-number">1.1.4.1.</span> <span class="toc-text">
+          1.4.1 计算方法</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E4%BB%A3%E7%A0%81%E5%AE%9E%E7%8E%B0"><span class="toc-number">1.1.4.2.</span> <span class="toc-text">
+          1.4.2 代码实现</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%BB%A4%E5%8E%BB%E8%BE%B9%E7%BC%98%E4%B8%8A%E7%9A%84%E5%85%B3%E9%94%AE%E7%82%B9"><span class="toc-number">1.1.5.</span> <span class="toc-text">
+          1.5 滤去边缘上的关键点</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0%E6%95%88%E6%9E%9C"><span class="toc-number">1.2.</span> <span class="toc-text">
+          2. 实现效果</span></a></li></ol></li></ol></section><!-- ov = overview--><section class="sidebar-ov hide"><div class="sidebar-ov-author"><div class="sidebar-ov-author__avatar"><img class="sidebar-ov-author__avatar_img" src="/images/icons/stun-logo.svg" alt="avatar"></div><p class="sidebar-ov-author__text">hello world</p></div><div class="sidebar-ov-state"><a class="sidebar-ov-state-item sidebar-ov-state-item--posts" href="/archives/"><div class="sidebar-ov-state-item__count">2</div><div class="sidebar-ov-state-item__name">Archives</div></a></div><div class="sidebar-ov-cc"><a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en" target="_blank" rel="noopener" data-popover="Creative Commons" data-popover-pos="up"><img src="/images/cc-by-nc-sa.svg"></a></div></section><div class="sidebar-reading"><div class="sidebar-reading-info"><span class="sidebar-reading-info__text">You have read </span><span class="sidebar-reading-info__num">0</span><span class="sidebar-reading-info__perc">%</span></div><div class="sidebar-reading-line"></div></div></aside></div><div class="clearfix"></div></div></main><footer class="footer" id="footer"><div class="footer-inner"><div><span>Copyright © 2021</span><span class="footer__icon"><i class="fas fa-heart"></i></span><span>scGao</span></div><div><span>Powered by <a href="http://hexo.io/" title="Hexo" target="_blank" rel="noopener">Hexo</a></span><span> v6.0.0</span><span class="footer__devider">|</span><span>Theme - <a href="https://github.com/liuyib/hexo-theme-stun/" title="Stun" target="_blank" rel="noopener">Stun</a></span><span> v2.6.2</span></div></div></footer><div class="loading-bar" id="loading-bar"><div class="loading-bar__progress"></div></div><div class="back2top" id="back2top"><span class="back2top__icon"><i class="fas fa-rocket"></i></span></div></div><script src="https://cdn.jsdelivr.net/npm/jquery@v3.4.1/dist/jquery.min.js"></script><script src="https://cdn.jsdelivr.net/npm/velocity-animate@1.5.2/velocity.min.js"></script><script src="https://cdn.jsdelivr.net/npm/velocity-animate@1.5.2/velocity.ui.min.js"></script><script type="text/x-mathjax-config">var mathjaxMhchem = '';
+var mathJaxTex = {
+  equationNumbers: {
+    autoNumber: 'AMS'
+  }
+};
+
+if (false) {
+  mathjaxMhchem = 'https://cdn.jsdelivr.net/npm/mathjax-mhchem@3.3.2/mhchem.min.js';
+  MathJax.Ajax.config.path['mhchem'] = mathjaxMhchem;
+
+  mathJaxTex.extensions = [mathjaxMhchem];
+} else {
+  mathJaxTex.extensions = ['AMSmath.js','AMSsymbols.js'];
+}
+
+MathJax.Hub.Config({
+  menuSettings: {
+    zoom: 'None'
+  },
+  showMathMenu: false,
+  jax: ['input/TeX','output/CommonHTML'],
+  extensions: ['tex2jax.js'],
+  TeX: mathJaxTex,
+  tex2jax: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    processEscapes: true,
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  }
+});
+
+MathJax.Hub.Register.StartupHook('TeX Jax Ready', function() {
+  MathJax.InputJax.TeX.prefilterHooks.Add(function(data) {
+    if (data.display) {
+      var next = data.script.nextSibling;
+      while (next && next.nodeName.toLowerCase() === '#text') { next = next.nextSibling; }
+      if (next && next.nodeName.toLowerCase() === 'br') { next.parentNode.removeChild(next); }
+    }
+  });
+});
+
+MathJax.Hub.Queue(function() {
+  var all = MathJax.Hub.getAllJax(), i;
+  for (i = 0; i < all.length; i++) {
+    document.getElementById(all[i].inputID + '-Frame').parentNode.className += ' has-jax';
+  }
+});
+</script><script src="https://cdn.jsdelivr.net/npm/mathjax/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script><script src="/js/utils.js?v=2.6.2"></script><script src="/js/stun-boot.js?v=2.6.2"></script><script src="/js/scroll.js?v=2.6.2"></script><script src="/js/header.js?v=2.6.2"></script><script src="/js/sidebar.js?v=2.6.2"></script></body></html>
